@@ -40,10 +40,33 @@ async fn main() -> Result<(), Error> {
             .app_data(web::Data::new(app_state.clone()))
             .service(controller::app)
             .service(controller::get_user)
+            .service(controller::health_check)
     })
     .bind(format!("0.0.0.0:{}", http_port))?
     .run()
     .await?;
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use actix_web::test;
+    use reqwest::StatusCode;
+
+    use super::*;
+
+    #[tokio::test]
+    async fn test_health_check() {
+        let app = App::new().service(controller::health_check);
+        let mut app = test::init_service(app).await;
+
+        let req = test::TestRequest::get().uri("/health_check").to_request();
+        let resp = test::call_service(&mut app, req).await;
+
+        assert_eq!(resp.status(), StatusCode::OK);
+
+        let body = test::read_body(resp).await;
+        assert!(body.is_empty());
+    }
 }

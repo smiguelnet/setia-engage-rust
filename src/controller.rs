@@ -20,3 +20,8 @@ pub async fn get_user(user: web::Json<User>) -> web::Json<User> {
         age: user.age.clone(),
     })
 }
+
+#[get("/health_check")]
+pub async fn health_check() -> impl Responder {
+    HttpResponse::Ok()
+}
