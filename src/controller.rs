@@ -1,8 +1,13 @@
 use crate::models::*;
+use crate::persistence::*;
 
-use actix_web::{get, post, web, HttpResponse, Responder, Result};
+use actix_web::{web, HttpResponse, Responder, Result};
+use deadpool_postgres::Client;
+use deadpool_postgres::Pool;
 
-#[get("/")]
+pub type APIResult = Result<HttpResponse, Box<dyn std::error::Error>>;
+
+#[actix_web::get("/")]
 pub async fn app(app_state: web::Data<AppState>) -> Result<impl Responder> {
     log::info!("Main route");
     let body = serde_json::to_string(&app_state);
@@ -11,17 +16,15 @@ pub async fn app(app_state: web::Data<AppState>) -> Result<impl Responder> {
         .body(body.unwrap()))
 }
 
-#[post("/user")]
-pub async fn get_user(user: web::Json<User>) -> web::Json<User> {
-    log::info!("User route / get_user");
-    web::Json(User {
-        id: Some(uuid::Uuid::new_v4().to_string()),
-        name: user.name.clone(),
-        age: user.age.clone(),
-    })
+#[actix_web::get("/users")]
+pub async fn get_users(db_pool: web::Data<Pool>) -> APIResult {
+    log::info!("Ger users");
+    let client: Client = db_pool.get().await?;
+    let users = db_list_users(&client).await?;
+    Ok(HttpResponse::Ok().json(users))
 }
 
-#[get("/health_check")]
+#[actix_web::get("/health_check")]
 pub async fn health_check() -> impl Responder {
     HttpResponse::Ok()
 }
